@@ -1399,6 +1399,42 @@ where
         g
     }
 
+    /// Create a new `Graph` by mapping node and
+    /// edge weights to new values.
+    ///
+    /// This method consumes `self`.
+    ///
+    /// The resulting graph has the same structure and the same
+    /// graph indices as `self`.
+    pub fn try_map<F, G, N2, E2, Error>(
+        self,
+        mut node_map: F,
+        mut edge_map: G,
+    ) -> Result<Graph<N2, E2, Ty, Ix>, Error>
+    where
+        F: FnMut(NodeIndex<Ix>, N) -> Result<N2, Error>,
+        G: FnMut(EdgeIndex<Ix>, E) -> Result<E2, Error>,
+    {
+        let mut g = Graph::with_capacity(self.node_count(), self.edge_count());
+
+        for (node_index, node) in self.nodes.into_iter().enumerate() {
+            g.nodes.push(Node {
+                weight: node_map(NodeIndex::new(node_index), node.weight)?,
+                next: node.next,
+            })
+        }
+
+        for (edge_index, edge) in self.edges.into_iter().enumerate() {
+            g.edges.push(Edge {
+                weight: edge_map(EdgeIndex::new(edge_index), edge.weight)?,
+                next: edge.next,
+                node: edge.node,
+            })
+        }
+
+        Ok(g)
+    }
+
     /// Create a new `Graph` by mapping nodes and edges.
     /// A node or edge may be mapped to `None` to exclude it from
     /// the resulting graph.
